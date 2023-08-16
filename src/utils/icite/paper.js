@@ -27,7 +27,7 @@ export const getRCRStatsByPMID = async (pubs, updateMainData) => {
     let pubsUnderUpdate = [...pubs];
     while(startidx < pubs.length) {
         const pubsInBatch = pubs.slice(startidx, startidx + batchsize);
-        const pmids = pubsInBatch.map((pub) => extractDOIorPMID(pub.id_pmid)).filter((entry) => entry);
+        const pmids = pubsInBatch.map((pub) => pub.id_pmid ? extractDOIorPMID(pub.id_pmid) : null).filter((entry) => entry);
         const rcrStatsByPMID = await getRCRStatsByPMIDBatch(pmids);
         const pubsInBatchWithCitationCounts = pubsInBatch.map((entry) => (
             {

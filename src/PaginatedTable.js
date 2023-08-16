@@ -7,6 +7,7 @@ import { visuallyHidden } from '@mui/utils';
 import { extractDOIorPMID } from './utils/common/regex-based';
 import { styled } from '@mui/material/styles';
 import {getDoximityMatchedIndividual} from './utils/doximity/individual'
+import SyncProblemIcon from '@mui/icons-material/SyncProblem';
 
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) {
@@ -42,7 +43,7 @@ function stableSort(array, comparator) {
 
 
 function EnhancedTableHead(props) {
-  const { onSelectAllClick, columnMetadata, order, orderBy, numSelected, rowCount, onRequestSort, loadingFields, collapsibleFields } =
+  const { onSelectAllClick, columnMetadata, order, orderBy, numSelected, rowCount, onRequestSort, loadingFields, timedout, collapsibleFields } =
     props;
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
@@ -65,9 +66,9 @@ function EnhancedTableHead(props) {
       >
         {headCell.label}
         {loadingFields?.includes(headCell.id) ? 
-        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+        ( (['author_first_display_name', 'author_last_display_name', 'publication_citation_count']).includes(headCell.id) && timedout ? <SyncProblemIcon /> : <span style={{ display: 'inline-flex', alignItems: 'center' }}>
         <CircularProgress size={20} style={{ marginRight: '0.5em' }} />
-        </span>
+        </span>)
         : ''}
         {orderBy === headCell.id ? (
           <Box component="span" sx={visuallyHidden}>
@@ -130,7 +131,7 @@ export const getIciteDisplay = (row) => {
       {
     row.rcrStats ? (<TableRow>
     <TableCell component="th" scope="row">
-       {extractDOIorPMID(row.id_pmid)}
+       {row.id_pmid ? extractDOIorPMID(row.id_pmid) : '-'}
      </TableCell>
      {
      ICITE_FIELDS_OF_INTEREST.map((field, idx) => <TableCell key={idx+1}>
@@ -169,7 +170,8 @@ const AuthorTable = (props) => {
     citation_count, 
     paper_count,
     getDoximityInfo,
-    loadingFields
+    loadingFields,
+    timedout
   } = props
 
   const authorDoximityInfo = React.useMemo(() => {
@@ -196,6 +198,7 @@ const AuthorTable = (props) => {
         </StyledTableRow>
       </TableHead>
       {
+        timedout ? <SyncProblemIcon/> :
         loadingFields.includes('author_first_display_name') ?
         <LinearProgress /> :
       <TableBody>
@@ -259,7 +262,7 @@ const AuthorTable = (props) => {
 }
 
 function Row(props) {
-  const { row, idx, programInfo, getDoximityInfo, loadingFields, columnMetadata } = props;
+  const { row, idx, programInfo, getDoximityInfo, loadingFields, timedout, columnMetadata } = props;
   const [programOpen, setProgramOpen] = React.useState(false);
   const [firstAuthorOpen, setFirstAuthorOpen] = React.useState(false);
   const [lastAuthorOpen, setLastAuthorOpen] = React.useState(false);
@@ -294,7 +297,7 @@ function Row(props) {
           hover
           role="checkbox"
           tabIndex={-1}
-          key={idx}
+          key={6*idx+1}
           sx={{ cursor: 'pointer' , '& > *': { borderBottom: 'unset' }}}
       >
         <TableCell align="center">{row.title}</TableCell>
@@ -373,7 +376,9 @@ function Row(props) {
           </IconButton>
         </TableCell>
       </TableRow>
-      <TableRow>
+      <TableRow
+                key={6*idx+2}
+                >
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={12}>
           <Collapse in={programOpen} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
@@ -389,7 +394,9 @@ function Row(props) {
           </Collapse>
         </TableCell>
       </TableRow>
-      <TableRow>          
+      <TableRow
+                key={6*idx+3}
+                >          
       <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={12}>
        <Collapse in={doiOpen} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
@@ -397,7 +404,7 @@ function Row(props) {
                 Publication Metrics : {row.id_pmid ? row.id_pmid : `PMID not found!`}
               </Typography>
               {
-                loadingFields.includes('publication_citation_count') ?
+                timedout ? <SyncProblemIcon /> : loadingFields.includes('publication_citation_count') ?
                 <LinearProgress /> :
                 getIciteDisplay(row)
               }              
@@ -405,7 +412,9 @@ function Row(props) {
           </Collapse>
           </TableCell>
       </TableRow>
-      <TableRow>          
+      <TableRow
+                key={6*idx+4}
+                >          
       <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={12}>
          <Collapse in={firstAuthorOpen } timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
@@ -421,12 +430,15 @@ function Row(props) {
               paper_count={row.author_first_paper_count}
               getDoximityInfo={getDoximityInfo}
               loadingFields={loadingFields}
+              timedout={timedout}
               />              
             </Box>
           </Collapse>
           </TableCell>
       </TableRow>
-      <TableRow>          
+      <TableRow
+                key={6*idx+5}
+                >          
       <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={12}>
           <Collapse in={lastAuthorOpen} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
@@ -442,12 +454,15 @@ function Row(props) {
               paper_count={row.author_last_paper_count}
               getDoximityInfo={getDoximityInfo}
               loadingFields={loadingFields}
+              timedout={timedout}
               />
             </Box>
           </Collapse>
           </TableCell>
       </TableRow>
-      <TableRow>          
+      <TableRow
+                key={6*idx}
+                >          
       </TableRow>
     </React.Fragment>
   );
@@ -568,6 +583,7 @@ export default function EnhancedTable(props) {
               onRequestSort={handleRequestSort}
               rowCount={rows.length}
               loadingFields={props.loadingFields}
+              timedout={props.timedout}
             />
             <TableBody>
               {visibleRows.map((row, index) => {
@@ -575,12 +591,14 @@ export default function EnhancedTable(props) {
                 const labelId = `enhanced-table-checkbox-${index}`;
 
                 return (
-                  <Row 
+                  <Row
+                  key={index} 
                   idx={index}
                   row={row}
                   programInfo={getProgramInfo(row.author_last_program_id)}
                   getDoximityInfo={getDoximityInfo}
                   loadingFields={props.loadingFields}
+                  timedout={props.timedout}
                   columnMetadata={columnMetadata}
                   />
                 );
@@ -590,6 +608,7 @@ export default function EnhancedTable(props) {
                   style={{
                     height: (dense ? 33 : 53) * emptyRows,
                   }}
+                  key={'empty'}
                 >
                   <TableCell colSpan={6} />
                 </TableRow>

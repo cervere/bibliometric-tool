@@ -10,13 +10,13 @@ TableHead, TableRow, TableCell, TableBody, CircularProgress, Table} from '@mui/m
 import {updatePubsWithExternalData} from './utils/common/wrappers';
 import {updateProgramInfo} from './utils/aamc-freida/programs';
 import {updateDoximityUserInfo} from './utils/doximity/individual'
-import {extractDOIorPMID} from './utils/common/regex-based';
 import {FileDownload as FileDownloadIcon} from '@mui/icons-material';
 import { ExportToCsv } from 'export-to-csv'; 
 import DoneOutlineIcon from '@mui/icons-material/DoneOutline';
 import ToggleButton from '@mui/material/ToggleButton';
 import extractRowExport, {exportRowExport} from './utils/data-export/export';
 import { getProgramInfo as getNSGYProgramInfo } from './utils/neurosurgery-match/program';
+import SyncProblemIcon from '@mui/icons-material/SyncProblem';
 
 const constructDataFrame = async (pandasDF) => {
   /**
@@ -136,7 +136,21 @@ const columnMetadata = [
     }
 ];
 
+function Disclaimer (props) {
+  const { type, text } = props;
+  const color = type === 'info' ? '#007bff' : '#ffc107'; // Blue for info, Yellow for disclaimer
+  const backgroundColor = type === 'info' ? '#e6f7ff' : '#fff3cd'; // Light blue for info, Light yellow for disclaimer
 
+  const disclaimerStyle = {
+    color,
+    backgroundColor,
+    padding: '10px',
+    marginTop: '20px',
+    borderRadius: '5px'
+  };
+
+  return <div style={disclaimerStyle}>{text}</div>;
+}
 
 export const getProgramDisplay = (row) => {
   return (
@@ -201,6 +215,7 @@ function App() {
     const [doximityUserData, setDoximityUserData] = useState();
     const [doximityUserDataLoaded, setDoximityUserDataLoaded] = useState();
     const [matchAffiliation, setMatchAffiliation] = useState(false);
+    const [timedout, setTimedout] = useState(false); 
 
     const filterRecords = (records, year, program) => {
       const filteredRecords = records?.filter((record) => {
@@ -231,6 +246,13 @@ function App() {
     }
     // load data from JSON file
     useEffect(() => {
+      const dataLoadTimeout = 30000; // 30 seconds
+      setTimeout(() => {
+        if(!semanticDataLoaded) {
+          setTimedout(true);
+        }
+      }, dataLoadTimeout);
+
         fetch('https://raw.githubusercontent.com/cervere/bibliometric-tool-static/main/data/pubs_with_author_match.json')
         .then(response => response.json())
         .then(res_data => {
@@ -247,7 +269,7 @@ function App() {
 
   const setDFs = async (df) => {
     const programNSGY = await getNSGYProgramInfo();
-    console.log(programNSGY)
+    // console.log(programNSGY)
     const minifiedDF = await df.loc({columns: FIELDS_OF_INTEREST})
     setRawData(await dfd.toJSON(df));
     setRawDataLoaded(true);
@@ -269,29 +291,29 @@ function App() {
     const programNames = programs.map(({name}) => name)
     const uniquePrograms = programs.filter(((entry, index) => programNames.indexOf(entry.name) === index));
     setUniquePrograms(uniquePrograms);
-    setFilteredData(filteredData)
-    // updatePubsWithExternalData(
-    //   filteredData, 
-    //   setFilteredData, 
-    //   setSemanticAuthorIds, 
-    //   setSemanticAuthorInfo,
-    //   setFinalFlags,
-    //   setIciteRCRDataLoaded
-    // );
+    setFilteredData(filteredData);
+    updatePubsWithExternalData(
+      filteredData, 
+      setFilteredData, 
+      setSemanticAuthorIds, 
+      setSemanticAuthorInfo,
+      setFinalFlags,
+      setIciteRCRDataLoaded
+    );
     updateProgramInfo(setProgramInfo, setAamcProgramInfoDataLoaded);
     updateDoximityUserInfo(setDoximityUserData, setDoximityUserDataLoaded);
     return true;
   }
 
 
-  if(rawDataLoaded) {
-    if(semanticDataLoaded) {
+  // if(rawDataLoaded) {
+  //   if(semanticDataLoaded) {
       
-    } else {
-    console.log('Semantic citations are being loaded...');
-    }
-    // setFilteredData(filterRecords(filteredData, startYear, programSearch));
-  } 
+  //   } else {
+  //   console.log('Semantic citations are being loaded...');
+  //   }
+  //   // setFilteredData(filterRecords(filteredData, startYear, programSearch));
+  // } 
 
   const handleYearChange = (event) => {
     setStartYear(event.target.value);
@@ -356,7 +378,7 @@ function App() {
   [filteredData, startYear, programSearch, matchAffiliation]);
 
   const dataToExport = useMemo(() => {
-    if(semanticDataLoaded &&
+    if((semanticDataLoaded || timedout) &&
       aamcProgramInfoDataLoaded &&
       iciteRCRDataLoaded && 
       doximityUserDataLoaded) {
@@ -370,7 +392,7 @@ function App() {
     iciteRCRDataLoaded, 
     doximityUserDataLoaded, 
     programInfo,
-    doximityUserData])
+    doximityUserData, timedout])
 
   const filteredDataToExport = useMemo(() => {
     if(dataToExport) {
@@ -423,14 +445,15 @@ function App() {
           >
             Export All Data
         </Button>
-        </Box>
         {
-          (semanticDataLoaded && aamcProgramInfoDataLoaded) ? '' : <LinearProgress  />
+          timedout ? <Disclaimer type="disclaimer" text="NOTE: Some data from Semantic Scholar API might be missing!!" /> : (semanticDataLoaded && aamcProgramInfoDataLoaded) ? ''  : <LinearProgress  />
         }
+        </Box>
         <EnhancedTable 
         columnMetadata={columnMetadata} 
         rows={allUpdatedData} 
         loadingFields={loadingFields}
+        timedout={timedout}
         getProgramInfo={getProgramInfo}
         doximityUserData={doximityUserData}
         />
@@ -479,20 +502,24 @@ function App() {
           >
             AAMC FREIDA Program INFO
         </Button>
+        <div>        
         <Button
         disabled={!semanticPubCitationDataLoaded}
             sx={{alignItems: 'left'}}
-            color="success"
+            color={timedout ? "error" : "success"}
             //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
             startIcon={
               semanticPubCitationDataLoaded ? 
               <DoneOutlineIcon />
+              : timedout ? <SyncProblemIcon/>
               : <CircularProgress />
             }
             variant="contained"
           >
             SemanticScholar Publication Data
         </Button>
+        {timedout && <Disclaimer type="disclaimer" text="Data fetch failed! We are currently using a free version of Semantic Scholar API, which is rate limited. Please reload the page after some time." />}
+        </div> 
         {semanticPubCitationDataLoaded ? <Button
         disabled={!semanticAuthorInfoDataLoaded}
             sx={{alignItems: 'left'}}
@@ -509,7 +536,8 @@ function App() {
         </Button> :
         ''
        }
-        </Box>      
+        </Box> 
+     
         </div>
       )  :
       <div className="App-header">
@@ -522,5 +550,7 @@ function App() {
     </div>
   );
 }
+
+
 
 export default App;

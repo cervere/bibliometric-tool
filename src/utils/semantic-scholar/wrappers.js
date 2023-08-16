@@ -32,11 +32,13 @@ export const getSemanticAuthorInfo = async (authorIds, updateSemanticAuthorInfo,
     let startidx = 0;
     let authorInfo = {};
     // console.log('before fetching author info')
+    let semanticCallCount = 0;
     while(startidx < authorIds.length) {
         console.log(' fetching author info ', startidx, ' of ', authorIds.length)
         const authorIdsInBatch = authorIds.slice(startidx, startidx + batchsize);
         try{
             const authorInfoBatch = await getAuthorInfo(authorIdsInBatch);
+            semanticCallCount += 1;
             authorInfo = {
                 ...authorInfo,
                 ...authorInfoBatch
@@ -53,6 +55,7 @@ export const getSemanticAuthorInfo = async (authorIds, updateSemanticAuthorInfo,
             // throw err;
         }
     }
+    console.log(`Total Semantic Scholar Author API calls : ${semanticCallCount}`)
     updateSemanticAuthorInfo(authorInfo);
     console.log('beginning author update on pubs')
     const updatedData = data.map((entry) => {
@@ -89,14 +92,20 @@ export const getSemanticAuthorInfo = async (authorIds, updateSemanticAuthorInfo,
 }
 
 export const getCitationsByDOI = async (pubs, updateMainData, updateSemanticAuthorIds) => {
-    const batchsize = 500;
+    const batchsize = 100;
     let startidx = 0;
     let pubsUnderUpdate = [...pubs];
     const semanticAuthorIds = new Set();
+    const failedDOIs = []
+    let semanticCallCount = 0;
+
     while(startidx < pubs.length) {
         const pubsInBatch = pubs.slice(startidx, startidx + batchsize);
         const dois = pubsInBatch.map((pub) => extractDOIorPMID(pub.id_doi));
-            const {citationCounts, authorIdDetails} = await getPaperCitationCountsByDOI(dois);
+        const semanticResponse = await getPaperCitationCountsByDOI(dois);
+        semanticCallCount += 1
+        if(semanticResponse){
+            const {citationCounts, authorIdDetails} = semanticResponse
             const pubsInBatchWithCitationCounts = pubsInBatch.map((entry) => {
                 const doi = extractDOIorPMID(entry.id_doi);
                 const pubAuthors = authorIdDetails[doi];
@@ -120,20 +129,20 @@ export const getCitationsByDOI = async (pubs, updateMainData, updateSemanticAuth
                         author_last_semantic_id = lastAuthorSem.authorId;
                         lastAuthor['semantic_id'] = lastAuthorSem.authorId;
                         semanticAuthorIds.add(lastAuthorSem.authorId)
-
+    
                     }
                     authors[firstAuthorSem.authorId] = firstAuthor;
                     authors[lastAuthorSem.authorId] = lastAuthor;
                 }
                 return {
-                  ...entry,
-                  author_first_semantic_id,
-                  author_last_semantic_id,
-                  authors,
-                  sem_authors,
-                  publication_citation_count: citationCounts[doi]
+                    ...entry,
+                    author_first_semantic_id,
+                    author_last_semantic_id,
+                    authors,
+                    sem_authors,
+                    publication_citation_count: citationCounts[doi]
                 }
-              });
+                });
             const allPubs = [
                 ...pubsUnderUpdate.slice(0, startidx),
                 ...pubsInBatchWithCitationCounts,
@@ -142,18 +151,14 @@ export const getCitationsByDOI = async (pubs, updateMainData, updateSemanticAuth
             // console.log(allPubs.find((pub) => pub.authors && Object.keys(pub.authors).length > 0))
             updateMainData(allPubs);
             updateSemanticAuthorIds(semanticAuthorIds);
-            pubsUnderUpdate = [...allPubs];
-            startidx += batchsize;
-        // }  catch(err) {
-        //     console.error(`Error making a request ${err}`)
-        //     if (err.response?.status === 400) {
-        //         console.error('Try with pmid');
-        //     } else {
-        //         console.log(`Request failed ${err.request?.path} - ${err.response?.status}`);
-        //     }
-        //     return {updatedData: null, success: false};
-        //     // throw err;
-        // }
+            pubsUnderUpdate = [...allPubs];        }
+        else {
+            failedDOIs.push(dois); //TODO: retry only these;
+            
+        }
+        startidx += batchsize;
     } 
-    return {updatedData: pubsUnderUpdate, success:  true, authorIds: semanticAuthorIds}
+    console.log(`Total Semantic Scholar Publication API calls : ${semanticCallCount}`)
+    const success = failedDOIs.length > 0 ? false: true
+    return {updatedData: pubsUnderUpdate, success, authorIds: semanticAuthorIds}
 }

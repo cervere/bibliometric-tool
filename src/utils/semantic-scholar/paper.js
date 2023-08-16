@@ -6,20 +6,34 @@ export const getPaperCitationCountsByDOI = async (dois) => {
     const url = PAPER_URL_ROUTE + 'batch?fields=citationCount,title,authors'
 
     const data = { ids: doisFormatted };
-    const response = await axios.post(url, data);
-    if(response.status === 200){
-        let citationCounts = {}
-        let authorIdDetails = {}
-        response.data.forEach((entry, i) => {
-            if(entry) {
-                citationCounts[dois[i]] = entry.citationCount
-                authorIdDetails[dois[i]] = entry.authors
-            }
-        })
-        return {citationCounts, authorIdDetails};
-    } else if(response.status === 429) {
-        throw new Error('Too many requests');
-    }
+    try{
+        const response = await axios.post(url, data);
+        if(response.status === 200){
+            let citationCounts = {}
+            let authorIdDetails = {}
+            response.data.forEach((entry, i) => {
+                if(entry) {
+                    citationCounts[dois[i]] = entry.citationCount
+                    authorIdDetails[dois[i]] = entry.authors
+                }
+            })
+            return {citationCounts, authorIdDetails};
+        } 
+    } catch (error) {
+        if (error.response) {
+          if (error.response.status === 429) {
+            // Handle 429 error (Too Many Requests)
+            console.log('Too Many Requests:', error.response.data);
+          } else {
+            // Handle other response errors
+            console.log('Error:', error.response.data);
+          }
+        } else {
+          // Handle network or request-related errors
+          console.log('Request Error:', error);
+        }
+      }
+
 }
 
 // getPaperCitationCountsByDOI(['10.46439/signaling.1.002']);

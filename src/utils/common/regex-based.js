@@ -16,6 +16,6 @@ export const extractDOIorPMID = (url) => {
         return path;
       } 
     }
-    console.error(`DOI/PMID URL does not match pattern: ${url}`);
+    // console.error(`DOI/PMID URL does not match pattern: ${url}`);
     return null;
 }
