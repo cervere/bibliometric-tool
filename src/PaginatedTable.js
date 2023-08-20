@@ -182,6 +182,7 @@ const AuthorTable = (props) => {
 
   return (              
   <Table size="small" >
+    <TableBody>
     <StyledTableRow>
     <TableCell>
       <Table size="small" aria-label="purchases">
@@ -197,37 +198,43 @@ const AuthorTable = (props) => {
           <TableCell align="right">Paper Count</TableCell>
         </StyledTableRow>
       </TableHead>
-      {
-        timedout ? <SyncProblemIcon/> :
-        loadingFields.includes('author_first_display_name') ?
-        <LinearProgress /> :
       <TableBody>
-          <StyledTableRow key={name}>
-            {first ?
-            <TableCell component="th" scope="row">
-            {first_author_student ? 'Yes' : 'No'}
-            </TableCell> :
-            <TableCell component="th" scope="row">
-            {position_rank}
-            </TableCell>}
-            
+      {
+        timedout ? <StyledTableRow key={name}><SyncProblemIcon/> </StyledTableRow>:
+        loadingFields.includes('author_first_display_name') ?
+        <StyledTableRow key={name}>
+          <LinearProgress /> 
+        </StyledTableRow>:
+        <StyledTableRow key={name}>
+          <TableCell component="th" scope="row">
+            {
+            first ?
+            (first_author_student ? 'Yes' : 'No')
+            // </TableCell> 
+            :
+            // <TableCell component="th" scope="row">
+            position_rank
+            }
+            </TableCell>
             <TableCell>{hindex}</TableCell>
             <TableCell align="right">{citation_count}</TableCell>
             <TableCell align="right">
               {paper_count}
             </TableCell>
-          </StyledTableRow>
-      </TableBody>
+            </StyledTableRow>
       }
+      </TableBody>
       </Table>
   </TableCell>
   </StyledTableRow>
   {
     loadingFields.includes('doximity') ?  <LinearProgress /> :
     first_author_student ? 
-    <Typography> 
+    <StyledTableRow>
+      <Typography> 
     Doximity profile not available!  
     </Typography>
+    </StyledTableRow>
     : <StyledTableRow>
       <TableCell>
       <Table size="small">
@@ -257,6 +264,7 @@ const AuthorTable = (props) => {
   </TableCell> 
   </StyledTableRow>
     }
+              </TableBody>
 </Table>
 )
 }

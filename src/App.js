@@ -203,6 +203,7 @@ function App() {
     const [semanticAuthorIds, setSemanticAuthorIds] = useState();
     const [semanticAuthorInfo, setSemanticAuthorInfo] = useState();
     const [semanticPubCitationDataLoaded, setSemanticPubCitationDataLoaded] = useState(false);
+    const [semanticPubCitationPartialLoaded, setSemanticPubCitationPartialLoaded] = useState(false);
     const [semanticAuthorInfoDataLoaded, setSemanticAuthorInfoDataLoaded] = useState(false);
     const [aamcProgramInfoDataLoaded, setAamcProgramInfoDataLoaded] = useState(false);
     const [semanticDataLoaded, setSemanticDataLoaded] = useState(false);
@@ -232,9 +233,10 @@ function App() {
     const setFinalFlags = (semanticUpdate) => {
       console.log('>>> Just loaded semantic');
       // console.log(semanticUpdate?.updatedData[0]);
-      setSemanticPubCitationDataLoaded(semanticUpdate.success?.pubCitations)
-      setSemanticAuthorInfoDataLoaded(semanticUpdate.success?.authorInfo)
-      setSemanticDataLoaded(semanticUpdate.success?.pubCitations && semanticUpdate.success?.authorInfo);
+      setSemanticPubCitationDataLoaded(semanticUpdate.pubCitations?.success)
+      setSemanticPubCitationPartialLoaded(semanticUpdate.pubCitations?.partial)
+      setSemanticAuthorInfoDataLoaded(semanticUpdate.authorInfo?.success)
+      setSemanticDataLoaded(semanticUpdate.pubCitations?.success && semanticUpdate.authorInfo?.success);
     }
   
     const getProgramInfo = (programId) => {
@@ -246,7 +248,7 @@ function App() {
     }
     // load data from JSON file
     useEffect(() => {
-      const dataLoadTimeout = 30000; // 30 seconds
+      const dataLoadTimeout = 90000; // 30 seconds
       setTimeout(() => {
         if(!semanticDataLoaded) {
           setTimedout(true);
@@ -506,7 +508,7 @@ function App() {
         <Button
         disabled={!semanticPubCitationDataLoaded}
             sx={{alignItems: 'left'}}
-            color={timedout ? "error" : "success"}
+            color={timedout ? "error" : semanticPubCitationPartialLoaded ? "warning" : "success"}
             //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
             startIcon={
               semanticPubCitationDataLoaded ? 
@@ -518,7 +520,6 @@ function App() {
           >
             SemanticScholar Publication Data
         </Button>
-        {timedout && <Disclaimer type="disclaimer" text="Data fetch failed! We are currently using a free version of Semantic Scholar API, which is rate limited. Please reload the page after some time." />}
         </div> 
         {semanticPubCitationDataLoaded ? <Button
         disabled={!semanticAuthorInfoDataLoaded}
@@ -537,6 +538,8 @@ function App() {
         ''
        }
         </Box> 
+        {timedout && <Disclaimer type="disclaimer" text="Data fetch failed! We are currently using a free version of Semantic Scholar API, which is rate limited. Please reload the page after some time." />}
+        {semanticPubCitationPartialLoaded && <Disclaimer type="disclaimer" text="Some of the publication data might be missing due to the limitations of the free version of Semantic Scholar API. Please reload the page after some time." />}
      
         </div>
       )  :

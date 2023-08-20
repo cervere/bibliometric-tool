@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { PAPER_URL_ROUTE } from "./common";
+import { PAPER_URL_ROUTE, SEMANTIC_API_HEADERS } from "./common";
 
 export const getPaperCitationCountsByDOI = async (dois) => {
     const doisFormatted = dois.map((doi) => 'DOI:'+doi);
@@ -7,7 +7,7 @@ export const getPaperCitationCountsByDOI = async (dois) => {
 
     const data = { ids: doisFormatted };
     try{
-        const response = await axios.post(url, data);
+        const response = await axios.post(url, data, {headers: SEMANTIC_API_HEADERS});
         if(response.status === 200){
             let citationCounts = {}
             let authorIdDetails = {}

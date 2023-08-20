@@ -11,7 +11,7 @@ export const updatePubsWithSemanticScholar = async (
     setFinalFlags) => {
     const semanticUpdate = await getCitationsByDOI(pubs, updateMainData, setSemanticAuthorIds);
     setFinalFlags({updatedData: semanticUpdate.updatedData, 
-        success: {pubCitations: semanticUpdate.success}
+        pubCitations: {success: semanticUpdate.success, partial: semanticUpdate.partial}
     });    
 
     const semanticAuthorUpdate = await getSemanticAuthorInfo(
@@ -20,8 +20,9 @@ export const updatePubsWithSemanticScholar = async (
         semanticUpdate.updatedData,
         updateMainData
     )
-    setFinalFlags({updatedData: semanticAuthorUpdate.updatedData, 
-        success: {pubCitations: semanticUpdate.success, authorInfo: semanticAuthorUpdate.success}
+    setFinalFlags({updatedData: semanticAuthorUpdate.updatedData,
+        pubCitations: {success: semanticUpdate.success, partial: semanticUpdate.partial}, 
+        authorInfo: {success: semanticAuthorUpdate.success}
     });
     return semanticUpdate;
     // console.log(Object.keys(citationsByDOI).length);
@@ -98,6 +99,7 @@ export const getCitationsByDOI = async (pubs, updateMainData, updateSemanticAuth
     const semanticAuthorIds = new Set();
     const failedDOIs = []
     let semanticCallCount = 0;
+    let failedSemanticCallCount = 0;
 
     while(startidx < pubs.length) {
         const pubsInBatch = pubs.slice(startidx, startidx + batchsize);
@@ -151,14 +153,14 @@ export const getCitationsByDOI = async (pubs, updateMainData, updateSemanticAuth
             // console.log(allPubs.find((pub) => pub.authors && Object.keys(pub.authors).length > 0))
             updateMainData(allPubs);
             updateSemanticAuthorIds(semanticAuthorIds);
-            pubsUnderUpdate = [...allPubs];        }
-        else {
+            pubsUnderUpdate = [...allPubs];        
+        } else {
+            failedSemanticCallCount += 1
             failedDOIs.push(dois); //TODO: retry only these;
-            
         }
         startidx += batchsize;
     } 
-    console.log(`Total Semantic Scholar Publication API calls : ${semanticCallCount}`)
-    const success = failedDOIs.length > 0 ? false: true
-    return {updatedData: pubsUnderUpdate, success, authorIds: semanticAuthorIds}
+    console.log(`Failed Semantic Scholar Publication API calls : ${failedSemanticCallCount}/${semanticCallCount}`)
+    const success = failedSemanticCallCount === semanticCallCount ? false: true
+    return {updatedData: pubsUnderUpdate, success, authorIds: semanticAuthorIds, partial: failedSemanticCallCount > 0}
 }
