@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import * as dfd from "danfojs"
 import EnhancedTable from './PaginatedTable';
 import EnhancedTableToolbar from './EnhancedTableToolbar';
@@ -217,6 +217,7 @@ function App() {
     const [doximityUserDataLoaded, setDoximityUserDataLoaded] = useState();
     const [matchAffiliation, setMatchAffiliation] = useState(false);
     const [timedout, setTimedout] = useState(false); 
+    const semanticDataLoadedRef = useRef(semanticDataLoaded); // Using useRef to create a stable reference
 
     const filterRecords = (records, year, program) => {
       const filteredRecords = records?.filter((record) => {
@@ -249,13 +250,17 @@ function App() {
     // load data from JSON file
     useEffect(() => {
       const dataLoadTimeout = 90000; // 30 seconds
-      setTimeout(() => {
-        if(!semanticDataLoaded) {
-          setTimedout(true);
+      const timer = setTimeout(() => {
+        // Here, access xRef.current instead of x directly
+        if (semanticDataLoadedRef.current) {
+          // Your code to execute after 90 seconds if x is true
+          console.log('Semantic Scholar data is loaded');
+        } else {
+          setTimedout(true)
         }
-      }, dataLoadTimeout);
-
-        fetch('https://raw.githubusercontent.com/cervere/bibliometric-tool-static/main/data/pubs_with_author_match.json')
+      }, dataLoadTimeout); // 90 seconds
+  
+        fetch('https://raw.githubusercontent.com/cervere/bibliometric-tool-static/main/data/pubs_with_author_match_latest_10042023.json')
         .then(response => response.json())
         .then(res_data => {
           // const dataFrame = new dfd.DataFrame(data);
@@ -268,6 +273,12 @@ function App() {
         })
         .catch(error => console.error(error));
     }, [])
+
+
+  useEffect(() => {
+    // Whenever x changes, update the value in xRef as well
+    semanticDataLoadedRef.current = semanticDataLoadedRef;
+  }, [semanticDataLoadedRef]);
 
   const setDFs = async (df) => {
     const programNSGY = await getNSGYProgramInfo();

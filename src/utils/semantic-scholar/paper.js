@@ -36,4 +36,19 @@ export const getPaperCitationCountsByDOI = async (dois) => {
 
 }
 
+export const getPaperCitationCountsByDOICustom = async (dois) => {
+  const url = 'https://amusing-gregarious-system.glitch.me/semantic-pubs'
+
+  const data = { ids: dois };
+  try{
+      const response = await axios.post(url, data);
+      if(response.status === 200){
+          return response.data;
+      } 
+  } catch (error) {
+        console.log('Request Error:', error);
+    }
+
+}
+
 // getPaperCitationCountsByDOI(['10.46439/signaling.1.002']);

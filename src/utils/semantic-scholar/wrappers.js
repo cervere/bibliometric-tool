@@ -1,5 +1,5 @@
 import { extractDOIorPMID } from "../common/regex-based";
-import {getPaperCitationCountsByDOI} from "./paper"
+import {getPaperCitationCountsByDOI, getPaperCitationCountsByDOICustom} from "./paper"
 import {getAuthorInfo} from "./author"
 
 
@@ -104,7 +104,7 @@ export const getCitationsByDOI = async (pubs, updateMainData, updateSemanticAuth
     while(startidx < pubs.length) {
         const pubsInBatch = pubs.slice(startidx, startidx + batchsize);
         const dois = pubsInBatch.map((pub) => extractDOIorPMID(pub.id_doi));
-        const semanticResponse = await getPaperCitationCountsByDOI(dois);
+        const semanticResponse = await getPaperCitationCountsByDOICustom(dois);
         semanticCallCount += 1
         if(semanticResponse){
             const {citationCounts, authorIdDetails} = semanticResponse
