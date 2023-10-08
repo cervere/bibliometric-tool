@@ -8,6 +8,8 @@ import { extractDOIorPMID } from './utils/common/regex-based';
 import { styled } from '@mui/material/styles';
 import {getDoximityMatchedIndividual} from './utils/doximity/individual'
 import SyncProblemIcon from '@mui/icons-material/SyncProblem';
+import InfoIcon from '@mui/icons-material/Info';
+import Tooltip from '@mui/material/Tooltip';
 
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) {
@@ -43,12 +45,13 @@ function stableSort(array, comparator) {
 
 
 function EnhancedTableHead(props) {
-  const { onSelectAllClick, columnMetadata, order, orderBy, numSelected, rowCount, onRequestSort, loadingFields, timedout, collapsibleFields } =
-    props;
+  const { onSelectAllClick, columnMetadata, order, orderBy, numSelected, rowCount, onRequestSort, collapsibleFields, 
+    loadingFields, timedout, fetchingExternalData } = props;
   const createSortHandler = (property) => (event) => {
     onRequestSort(event, property);
   };
 
+  const infoMessage = 'More information is updated from an external API. Verify the status below and click above to (re)fetch the external data';
   const cellElems = [];
 
   columnMetadata.forEach((headCell, i) => {
@@ -65,11 +68,17 @@ function EnhancedTableHead(props) {
         onClick={createSortHandler(headCell.id)}
       >
         {headCell.label}
-        {loadingFields?.includes(headCell.id) ? 
-        ( (['author_first_display_name', 'author_last_display_name', 'publication_citation_count']).includes(headCell.id) && timedout ? <SyncProblemIcon /> : <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-        <CircularProgress size={20} style={{ marginRight: '0.5em' }} />
-        </span>)
-        : ''}
+        {
+        loadingFields?.includes(headCell.id) ? 
+        ( 
+        (['author_first_display_name', 'author_last_display_name', 'publication_citation_count']).includes(headCell.id) && timedout 
+        ? <SyncProblemIcon /> 
+        : fetchingExternalData ? <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <CircularProgress size={20} style={{ marginRight: '0.5em' }} />
+          </span> 
+        : <Tooltip title={infoMessage}><InfoIcon /></Tooltip>
+        ) : ''
+        }
         {orderBy === headCell.id ? (
           <Box component="span" sx={visuallyHidden}>
             {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
@@ -592,6 +601,7 @@ export default function EnhancedTable(props) {
               rowCount={rows.length}
               loadingFields={props.loadingFields}
               timedout={props.timedout}
+              fetchingExternalData={props.fetchingExternalData}
             />
             <TableBody>
               {visibleRows.map((row, index) => {

@@ -17,6 +17,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import extractRowExport, {exportRowExport} from './utils/data-export/export';
 import { getProgramInfo as getNSGYProgramInfo } from './utils/neurosurgery-match/program';
 import SyncProblemIcon from '@mui/icons-material/SyncProblem';
+import ExternalDataStatus from './components/ExternalDataStatus'
 
 const constructDataFrame = async (pandasDF) => {
   /**
@@ -217,6 +218,7 @@ function App() {
     const [doximityUserDataLoaded, setDoximityUserDataLoaded] = useState();
     const [matchAffiliation, setMatchAffiliation] = useState(false);
     const [timedout, setTimedout] = useState(false); 
+    const [fetchingExternalData, setFetchingExternalData] = useState(false);
     const semanticDataLoadedRef = useRef(semanticDataLoaded); // Using useRef to create a stable reference
 
     const filterRecords = (records, year, program) => {
@@ -305,7 +307,13 @@ function App() {
     const uniquePrograms = programs.filter(((entry, index) => programNames.indexOf(entry.name) === index));
     setUniquePrograms(uniquePrograms);
     setFilteredData(filteredData);
-    updatePubsWithExternalData(
+    return true;
+  }
+
+
+  const updateFromExternalAPis = async () => {
+    setFetchingExternalData(true);
+    await updatePubsWithExternalData(
       filteredData, 
       setFilteredData, 
       setSemanticAuthorIds, 
@@ -313,12 +321,10 @@ function App() {
       setFinalFlags,
       setIciteRCRDataLoaded
     );
-    updateProgramInfo(setProgramInfo, setAamcProgramInfoDataLoaded);
-    updateDoximityUserInfo(setDoximityUserData, setDoximityUserDataLoaded);
-    return true;
+    await updateProgramInfo(setProgramInfo, setAamcProgramInfoDataLoaded);
+    await updateDoximityUserInfo(setDoximityUserData, setDoximityUserDataLoaded);
+    setFetchingExternalData(false);
   }
-
-
   // if(rawDataLoaded) {
   //   if(semanticDataLoaded) {
       
@@ -421,7 +427,7 @@ function App() {
       <div className="content">      
         <EnhancedTableToolbar startYear={2013} year={startYear} handleYearChange={handleYearChange} />
         <SearchFromSelect sx={{alignItems: 'center'}} options={uniquePrograms} onSelect={setProgramSearch}/>
-        <ToggleButton
+      <ToggleButton
       value="check"
       selected={matchAffiliation}
       onChange={() => {
@@ -432,7 +438,16 @@ function App() {
       <Typography>
       Last Author Affiliations
       </Typography>
-    </ToggleButton>        
+    </ToggleButton>
+    <p><Button
+        disabled={fetchingExternalData}
+            sx={{alignItems: 'left'}}
+            color="success"
+            variant="contained"
+            onClick={() => updateFromExternalAPis()}
+          >
+          {fetchingExternalData ? 'Fetching External Data...' : 'Fetch External Data'}  
+    </Button> </p>
       <Box
           sx={{ display: 'flex', gap: '1rem', p: '0.5rem', flexWrap: 'wrap', flexDirection: 'row-reverse' }}
         >
@@ -469,89 +484,32 @@ function App() {
         timedout={timedout}
         getProgramInfo={getProgramInfo}
         doximityUserData={doximityUserData}
+        fetchingExternalData={fetchingExternalData}
         />
+        <ExternalDataStatus 
+        status={{doximityUserDataLoaded,
+          iciteRCRDataLoaded,
+          aamcProgramInfoDataLoaded,
+          semanticPubCitationDataLoaded,
+          semanticPubCitationPartialLoaded,
+          semanticAuthorInfoDataLoaded,
+          fetchingExternalData,
+          timedout}}
+        />
+        {timedout && <Disclaimer type="disclaimer" text="Data fetch failed! We are currently using a free version of Semantic Scholar API, which is rate limited. Please reload the page after some time." />}
+        {semanticPubCitationPartialLoaded && <Disclaimer type="disclaimer" text="Some of the publication data might be missing due to the limitations of the free version of Semantic Scholar API. Please reload the page after some time." />}
         <Box
           sx={{ display: 'flex', gap: '1rem', p: '0.5rem', flexWrap: 'wrap', flexDirection: 'row-reverse' }}
         >
         <Button
-        disabled={!doximityUserDataLoaded}
-            sx={{alignItems: 'left'}}
-            color="success"
-            //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
-            startIcon={
-              doximityUserDataLoaded ? 
-              <DoneOutlineIcon />
-              : <CircularProgress />
-            }
-            variant="contained"
-          >
-            Doximity User Info
-        </Button>
-        <Button
-        disabled={!iciteRCRDataLoaded}
-            sx={{alignItems: 'left'}}
-            color="success"
-            //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
-            startIcon={
-              iciteRCRDataLoaded ? 
-              <DoneOutlineIcon />
-              : <CircularProgress />
-            }
-            variant="contained"
-          >
-            iCite NIH Publication Metrics
-        </Button>
-        <Button
-        disabled={!aamcProgramInfoDataLoaded}
-            sx={{alignItems: 'left'}}
-            color="success"
-            //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
-            startIcon={
-              aamcProgramInfoDataLoaded ? 
-              <DoneOutlineIcon />
-              : <CircularProgress />
-            }
-            variant="contained"
-          >
-            AAMC FREIDA Program INFO
-        </Button>
-        <div>        
-        <Button
-        disabled={!semanticPubCitationDataLoaded}
-            sx={{alignItems: 'left'}}
-            color={timedout ? "error" : semanticPubCitationPartialLoaded ? "warning" : "success"}
-            //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
-            startIcon={
-              semanticPubCitationDataLoaded ? 
-              <DoneOutlineIcon />
-              : timedout ? <SyncProblemIcon/>
-              : <CircularProgress />
-            }
-            variant="contained"
-          >
-            SemanticScholar Publication Data
-        </Button>
-        </div> 
-        {semanticPubCitationDataLoaded ? <Button
         disabled={!semanticAuthorInfoDataLoaded}
             sx={{alignItems: 'left'}}
             color="success"
-            //export all data that is currently in the table (ignore pagination, sorting, filtering, etc.)
-            startIcon={
-              semanticAuthorInfoDataLoaded ? 
-              <DoneOutlineIcon />
-              : <CircularProgress />
-            }
             variant="contained"
           >
-            SemanticScholar Author Data
-        </Button> :
-        ''
-       }
-        </Box> 
-        {timedout && <Disclaimer type="disclaimer" text="Data fetch failed! We are currently using a free version of Semantic Scholar API, which is rate limited. Please reload the page after some time." />}
-        {semanticPubCitationPartialLoaded && <Disclaimer type="disclaimer" text="Some of the publication data might be missing due to the limitations of the free version of Semantic Scholar API. Please reload the page after some time." />}
-     
+            Update Backend Database
+        </Button>
+        </Box>
         </div>
       )  :
       <div className="App-header">
