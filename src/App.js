@@ -489,6 +489,7 @@ function App() {
         doximityUserData={doximityUserData}
         fetchingExternalData={fetchingExternalData}
         />
+        <Disclaimer type="info" text="Student: Individual with no record as Resident/Faculty/Fellow nor a clinician profile on Doximity is labelled as a Student." />
         <ExternalDataStatus 
         status={{doximityUserDataLoaded,
           iciteRCRDataLoaded,

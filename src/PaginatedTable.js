@@ -303,9 +303,10 @@ function Row(props) {
   const getTransformedValue = (key, value) => {
     const meta = columnMetadata.find((meta) => meta.id === key);
     if(meta?.transform) {
-      return meta.transform(value);
+      const val = meta.transform(value)
+      return val.startsWith("Student") ? <a>{val}<sup>*</sup></a> : val
     }
-    return value;
+    return value
   }
 
    return (
