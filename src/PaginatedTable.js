@@ -238,7 +238,7 @@ const AuthorTable = (props) => {
   </StyledTableRow>
   {
     loadingFields.includes('doximity') ?  <LinearProgress /> :
-    first_author_student ? 
+    (first_author_student || !authorDoximityInfo || authorDoximityInfo.length === 0)? 
     <StyledTableRow>
       <Typography> 
     Doximity profile not available!  

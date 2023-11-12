@@ -98,7 +98,7 @@ const columnMetadata = [
     label: 'First Author Edu Level',
     transform: (value) => {
       const mapping = {
-        'student?' : 'Student^', 
+        'student?' : 'Student', 
         'faculty' : 'Faculty', 
         'resident' : 'Resident', 
         'MD' : 'MD', 
@@ -368,6 +368,9 @@ function App() {
 
 
   const loadingFields = useMemo(() => {
+    if(!fetchingExternalData) {
+      return [];
+    }
     const fields = semanticDataLoaded ? []
           : semanticPubCitationDataLoaded ? ['author_first_display_name', 'author_last_display_name'] 
           : ['author_first_display_name', 'author_last_display_name', 'publication_citation_count'];
@@ -383,7 +386,7 @@ function App() {
     return fields;
   }, 
   [aamcProgramInfoDataLoaded, semanticDataLoaded, semanticPubCitationDataLoaded, iciteRCRDataLoaded,
-    doximityUserDataLoaded])
+    doximityUserDataLoaded, fetchingExternalData])
 
   const allUpdatedData = useMemo(() => {
     let data ;
@@ -474,7 +477,7 @@ function App() {
             Export All Data
         </Button>
         {
-          timedout ? <Disclaimer type="disclaimer" text="NOTE: Some data from Semantic Scholar API might be missing!!" /> : (semanticDataLoaded && aamcProgramInfoDataLoaded) ? ''  : <LinearProgress  />
+          (timedout ? <Disclaimer type="disclaimer" text="NOTE: Some data from Semantic Scholar API might be missing!!" /> : (semanticDataLoaded && aamcProgramInfoDataLoaded) ? ''  : <LinearProgress  />)
         }
         </Box>
         <EnhancedTable 
@@ -504,7 +507,7 @@ function App() {
         <Button
         disabled={!semanticAuthorInfoDataLoaded}
             sx={{alignItems: 'left'}}
-            color="success"
+            color="primary"
             variant="contained"
           >
             Update Backend Database
