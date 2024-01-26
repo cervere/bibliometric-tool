@@ -467,7 +467,7 @@ function App() {
       </Typography>
     </ToggleButton>
     <p><Button
-        disabled={fetchingExternalData || allUpdatedData.length === 0}
+        disabled={fetchingExternalData || allUpdatedData.length === 0 || downloadErrors.length > 0}
             sx={{alignItems: 'left'}}
             color="success"
             variant="contained"
