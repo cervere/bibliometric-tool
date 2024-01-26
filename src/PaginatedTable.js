@@ -375,7 +375,7 @@ function Row(props) {
             {lastAuthorOpen ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
           </IconButton>
         </TableCell>
-        <TableCell align="right">{expandRank(row.author_last_position_rank)}</TableCell>
+        <TableCell align="right">{row.author_last_position_rank && expandRank(row.author_last_position_rank)}</TableCell>
         <TableCell
           onClick={(event) => handleClick(event)}
           component="th"

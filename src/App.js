@@ -194,9 +194,14 @@ export const getProgramDisplay = (row) => {
   )
 }
 
+const PUBLICATION_STATIC_DATA_URL = 'https://raw.githubusercontent.com/cervere/bibliometric-tool-static/main/data/pubs_with_author_match_latest_10042023.json';
+
+const PUBLICATION_DATA_API = 'https://big-agate-lumber.glitch.me/pub-ind-pro'
 
 function App() {
     // initialize state for the data
+    const [downloadErrors, setDownloadErrors] = useState();
+    const [publicationsSince, setPublicationsSince] = useState(2013);
     const [data, setData] = useState();
     const [rawData, setRawData] = useState();
     const [rawDataLoaded, setRawDataLoaded] = useState(false);
@@ -262,15 +267,38 @@ function App() {
         }
       }, dataLoadTimeout); // 90 seconds
   
-        fetch('https://raw.githubusercontent.com/cervere/bibliometric-tool-static/main/data/pubs_with_author_match_latest_10042023.json')
+        fetch(PUBLICATION_DATA_API)
         .then(response => response.json())
         .then(res_data => {
           // const dataFrame = new dfd.DataFrame(data);
           // console.log(dataFrame.columns);
-          constructDataFrame(res_data).then((dataFrame) => {
-            setDFs(dataFrame).then(() => {
-              setFullDataLoaded(true);
-            });
+          // constructDataFrame(res_data).then(async (dataFrame) => {
+          //   const minifiedDF = await dataFrame.loc({columns: FIELDS_OF_INTEREST})
+          //   setRawData(await dfd.toJSON(dataFrame));
+          //   setRawDataLoaded(true);
+          //   const loadedData = await dfd.toJSON(minifiedDF);
+          //   setDFs(loadedData).then(() => {
+          //     setFullDataLoaded(true);
+          //   });
+          // });
+
+          /**
+           * {
+              "someData": true,
+              "count": 998,
+              "updateAt": "2023-12-16T15:17:47.801Z",
+              "data": { ... }
+           }
+           */
+          const loadedData = Object.values(res_data.data);
+          setDownloadErrors(res_data.message);
+          if(res_data.publicationsSince) {
+            setPublicationsSince(res_data.publicationsSince);
+          }
+          setRawData(loadedData);
+          setRawDataLoaded(true);
+          setDFs(loadedData).then(() => {
+            setFullDataLoaded(true);
           });
         })
         .catch(error => console.error(error));
@@ -282,13 +310,9 @@ function App() {
     semanticDataLoadedRef.current = semanticDataLoadedRef;
   }, [semanticDataLoadedRef]);
 
-  const setDFs = async (df) => {
-    const programNSGY = await getNSGYProgramInfo();
+  const setDFs = async (loadedData) => {
+    // const programNSGY = await getNSGYProgramInfo();
     // console.log(programNSGY)
-    const minifiedDF = await df.loc({columns: FIELDS_OF_INTEREST})
-    setRawData(await dfd.toJSON(df));
-    setRawDataLoaded(true);
-    const loadedData = await dfd.toJSON(minifiedDF);
     setData(loadedData);
     // console.log('>>>>', loadedData.find((entry) => entry.authors && Object.keys(entry.authors).length > 0));
     // console.log(data.map((entry) => citations[extractDOI(entry.id_doi)]))
@@ -428,7 +452,7 @@ function App() {
       {allUpdatedData ?       
       (      
       <div className="content">      
-        <EnhancedTableToolbar startYear={2013} year={startYear} handleYearChange={handleYearChange} />
+        <EnhancedTableToolbar startYear={publicationsSince} year={startYear} handleYearChange={handleYearChange} />
         <SearchFromSelect sx={{alignItems: 'center'}} options={uniquePrograms} onSelect={setProgramSearch}/>
       <ToggleButton
       value="check"
@@ -443,7 +467,7 @@ function App() {
       </Typography>
     </ToggleButton>
     <p><Button
-        disabled={fetchingExternalData}
+        disabled={fetchingExternalData || allUpdatedData.length === 0}
             sx={{alignItems: 'left'}}
             color="success"
             variant="contained"
@@ -451,6 +475,11 @@ function App() {
           >
           {fetchingExternalData ? 'Fetching External Data...' : 'Fetch External Data'}  
     </Button> </p>
+    {
+      downloadErrors && downloadErrors.map((error, i) =>         
+      <Disclaimer key={i} type="disclaimer" text={error} />
+      )
+    }
       <Box
           sx={{ display: 'flex', gap: '1rem', p: '0.5rem', flexWrap: 'wrap', flexDirection: 'row-reverse' }}
         >
